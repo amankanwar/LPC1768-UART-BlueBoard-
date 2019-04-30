@@ -90,7 +90,7 @@ void receivePassword(unsigned char*);
 void receivePassword(unsigned char* charArray)
 {
 	unsigned char index =0;
-  unsigned char data;
+  	unsigned char data;
 	
 	while(data!='\r')
 	{
@@ -106,7 +106,7 @@ void receivePassword(unsigned char* charArray)
 void receiveString(unsigned char* charArray)
 {
 	unsigned char index =0;
-  unsigned char data;
+  	unsigned char data;
 	
 	while(data!='\r') 
 	{
@@ -119,14 +119,7 @@ void receiveString(unsigned char* charArray)
 }
 
 
-void delay(unsigned int time)
-{
-for(int i=0;i<1000;i++)
-			{
-				for(int j=0;j<time;j++);
-			}
-}
-
+void delay(unsigned int time){for(int i=0;i<1000;i++){for(int j=0;j<time;j++);}}
 
 // This funciton block, received a single character from the user
 unsigned char receiveCharacter()
@@ -141,27 +134,27 @@ unsigned char receiveCharacter()
 //------------This function block will be send any character (Value provided as parameters by the caller)
 void sendCharacter(unsigned char data)
 {
-  while(PREVIOUS_DATA_IS_NOT_SENT);   // wait for the THRE to become 1, i.r THR to becomes empty
+  	while(PREVIOUS_DATA_IS_NOT_SENT);   // wait for the THRE to become 1, i.r THR to becomes empty
 	LPC_UART3->THR = data;              // sending the data to the THR register
 }
 //-----------------------------------------------------------------------------
 
 void nextLine(unsigned char numberOfLines)
 {
-// below mentioned code lines will insert a new line on the terminal
-  while(numberOfLines > 0)
+	// below mentioned code lines will insert a new line on the terminal
+  	while(numberOfLines > 0)
 	{
 	sendCharacter('\r');   // carriage return
-  sendCharacter('\n');	
-  --numberOfLines; 		
-  }
+  	sendCharacter('\n');	
+  	--numberOfLines; 		
+  	}
 }
 
 //------------This function block will be send any character (Value provided as parameters by the caller)
 void sendString(unsigned char *dataString)
 {
 	unsigned char index = 0;
-  while(dataString[index] != '\0'){sendCharacter(dataString[index++]);}
+  	while(dataString[index] != '\0'){sendCharacter(dataString[index++]);}
 	// in the above line of code, we are sending each character present in the "dataString"
 }
 //-----------------------------------------------------------------------------
@@ -170,11 +163,11 @@ void sendString(unsigned char *dataString)
 void init_UART()
 {
 	// Enabling the UART 3 in PCONP register and selecting the 1/4th of CCLK for PCLK
-  LPC_SC->PCONP        |=      SBIT(LPC_SC->PCONP,PCUART3,HIGH); 	       // enabling the UART3
+  	LPC_SC->PCONP        |=      SBIT(LPC_SC->PCONP,PCUART3,HIGH); 	       // enabling the UART3
 	LPC_SC->PCLKSEL1     |=      CLR(LPC_SC->PCLKSEL1,PCLK_UART3,HIGH);    // to clear the PINS 18,19	
   
 	//(to setup Line Control Register, Divisor_Latch_Access should be high)
-  LPC_UART3->LCR       |=      SBIT(LPC_UART3->LCR,Divisor_Latch_Access,HIGH);
+  	LPC_UART3->LCR       |=      SBIT(LPC_UART3->LCR,Divisor_Latch_Access,HIGH);
 	// Setting up the Line Control Register, 
 	LPC_UART3->LCR       |=      SBIT(LPC_UART3->LCR,Word_Length_Select,3);    
 	//LPC_UART3->LCR       |=      CLR(LPC_UART3->LCR,Stop_Bit_Select,HIGH);    
@@ -183,7 +176,7 @@ void init_UART()
 	(make sure that DLAB =1 to enables access to registers DLL and DLM for setting the baud rate. */
 	// UARTn Divisor Latch LSB register (U0DLL)
 	LPC_UART3->DLL        = 162;   // for baud rate of 9600,
-  LPC_UART3->DLM        =   0;	
+  	LPC_UART3->DLM        =   0;	
 	/*
 	DLL =     PCLK     (PCLK is 25 MHz, as calculated earlier, 100/4 = 25MHz)
 					---------	 (Assuming DLM =0, U3FDR=0x01 i.e. MUL and DIV values are 1 and 0 rspectively)
@@ -191,8 +184,10 @@ void init_UART()
 	*/
 	
 	//(once the LCR and Baud Rate is set, Divisor_Latch_Access should be low)
-    LPC_UART3->LCR        =      CLR(LPC_UART3->LCR,Divisor_Latch_Access,HIGH);
- 		
+    	LPC_UART3->LCR        =      CLR(LPC_UART3->LCR,Divisor_Latch_Access,HIGH);
+ 	//here we have used equal to (=) and not  (|=) because all the existing values in  LPC_UART3->LCR are already saved in CLR macro
+	// hence, assigning it directly using (=) operator will not affect any other bit in LPC_UART3->LCR register
+	
 	//LPC_UART3->LCR        = 0x03;
 		
 	 /*Next step is to setup the FIFO settings in "UARTn FIFO Control Register", since the default
@@ -202,10 +197,8 @@ void init_UART()
 		 make sure that the UART receive pins should not have pull-down resistors enabled*/
    
 	 // setting the PINSEL value for the given Pins, (P0.1 -- RXD3 and P0.0 -- TXD3) 
-	 LPC_PINCON->PINSEL0  |=     SBIT(LPC_PINCON->PINSEL0,PINSEL0_RXD3,2) |
-                               SBIT(LPC_PINCON->PINSEL0,PINSEL0_TXD3,2);  	 
-  
+	LPC_PINCON->PINSEL0  |=     SBIT(LPC_PINCON->PINSEL0,PINSEL0_RXD3,2) |
+				    SBIT(LPC_PINCON->PINSEL0,PINSEL0_TXD3,2);  	  
 	 // now we just need to send and receive the data
 }
-
 #endif
