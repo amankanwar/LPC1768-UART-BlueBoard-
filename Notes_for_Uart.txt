@@ -1,0 +1,117 @@
+-------------- UART implementation on LPC1768 (Cortex M3) using Blue Board --------------------
+
+Important Points
+
+*	This documentation contains the notes for implementing the UART on the Blue Board, 
+*	On the Blue Board LPC1768, UART1 Terminal (on board) is actually mapped to the UART3 Pin of LPC1768 (Cortex M3),
+	pin mappings of LPC2148  is not applicable with LPC1768 (Cortex M3) (even on the same blueboard)
+*	The default CCLK (setup in the Startup file) is set to 100 Mhz (this the maximum supported clock by LPC1768 (Cortex M3))
+	In section 1.1 Introduction it is mentioned "High speed versions (LPC1769 and LPC1759) operate at up to a 120 MHz CPU
+	frequency. Other versions operate at up to an 100 MHz CPU frequency."
+*	In the startup file the CCLK is set to >100 Mhz, since the LPC1768 supports maximum of 100 MHz hence the CCLK is by default
+	running at 100MHz (for more information, see the system_LPC17xx.h)
+
+/*---------------------------------------------------------------------------------
+The UART0/2/3 peripherals are configured using the following registers:
+
+1. Power: In the PCONP register (Table 46), set bits PCUART0/2/3.
+Remark: On reset, UART0 is enabled (PCUART0 = 1), and UART2/3 are disabled (PCUART2/3 = 0).
+
+2. Peripheral clock: In the PCLKSEL0 register (Table 40), select PCLK_UART0; in the
+PCLKSEL1 register (Table 41), select PCLK_UART2/3.
+
+3. Baud rate: In register U0/2/3LCR (Table 280), set bit DLAB =1. This enables access
+to registers DLL (Table 274) and DLM (Table 275) for setting the baud rate. Also, if
+needed, set the fractional baud rate in the fractional divider register (Table 286).
+
+4. UART FIFO: Use bit FIFO enable (bit 0) in register U0/2/3FCR (Table 279) to enable FIFO.
+
+5. Pins: Select UART pins through the PINSEL registers and pin modes through the PINMODE registers (Section 8.5).
+Remark: UART receive pins should not have pull-down resistors enabled.
+
+6. Interrupts: To enable UART interrupts set bit DLAB =0 in register U0/2/3LCR (Table 280). 
+   This enables access to U0/2/3IER (Table 276). Interrupts are enabled in the NVIC using the appropriate Interrupt Set Enable register.
+
+7. DMA: UART0/2/3 transmit and receive functions can operate with the GPDMA
+   controller (see Table 544).
+
+
+
+ Steps:-
+ 
+      (Since all the registers are defined in structures provided in the file LPC17xx.h, hence, we can search for the given register in this header file)
+	  ( to get the name of that perticular structure pointer, once know, we can access the structure members (which are the registers that we require) by
+	  derefrencing the structure pointer using ->)
+
+ 1->  Enabling the Peripheral Function for the UART3 as On reset, UART0 is enabled (PCUART0 = 1), and UART2/3 are disabled (PCUART2/3 = 0). 
+      Set the Bit 25 (PCUART3 UART 3 power/clock control bit) in PCONP, this will enable the UART3 periperal Clk power.
+	 
+ 2-> Setting the Peripheral Clock (UART Clock) as per our requirement, know that Peripheral Clock Selection registers 0 and 1 (PCLKSEL0 -
+     0x400F C1A8 and PCLKSEL1 - 0x400F C1AC) A pair of bits in a Peripheral Clock Selection register controls the rate of the clock signal
+     that will be supplied to the corresponding peripheral as specified in Table 40, Table 41 and Table 42.
+
+     For UART3, we have the register PCLKSEL1, and bits are 19:18 (PCLK_UART3 Peripheral clock selection for UART3)  (Reset Value/Default Value-00)
+	 
+ 3->  Setting Up the Line Control Register and Setting Up the values of UnDLL and UnDLM to setup the Baud Rate
+      - Set the Divisor Latch Enable Bit high (to setup the LCR and UnDLL and UnDLM values)
+      - Set the LCR values (Bits, Parity, Data Frame) (LPC_UARTn->LCR  (n = 0,1,2,3))
+	  - Set the values for the UnDLL and UnDLM      (n = 0,1,2,3)
+	    -- For now, set the UnDLM = 0, and find the value of UnDLL for a given Baud Rate.
+		    DLL =     PCLK       (PCLK is 25 MHz, as calculated earlier, 100/4 = 25MHz)
+					---------	 (Assuming DLM =0, U3FDR=0x01 i.e. MUL and DIV values are 1 and 0 rspectively)
+	                16 x BaudRate
+					
+		-- Once the LCR is setup and Baud rate is set, clear the Divisor Latch Enable Bit for the changes to take place.
+		   	
+			
+ 4->  UART FIFO: Use bit FIFO enable (bit 0) in register U0/2/3FCR (Table 279) to enable FIFO.	  
+	  
+ 5->  Selecting the Uart Pins by chnging the Function of the Port Pins using PINSELn (n=0,1,2..10)
+      In our case, we are usning the UART3 peripheral and for this peripheral we have the pins and PINSEL values as provided below:
+      -------------------------------------------------------------------------------
+                              PINSEL Value 	     TXD3                     RXD3		    
+      PINSEL0                    10 		  (1:0)   P0.0            (3:2)   P0.1
+      PINSEL1                    11           (19:18) P0.25           (21:20) P0.26
+	  PINSEL9	  				 11	          (25:24) P4.28           (27:26) P4.29
+   	  -------------------------------------------------------------------------------
+	  
+ 6-> After Setting all the settings, we can send and receive the data using the Registers:- THR 
+     -- Monitoring of data can be done using the UARTn Line Status Register,  	  
+	 
+	 UART1 Transmitter Holding Register (THR):-  
+	  --The write-only U1THR is the top byte of the UART1 TX FIFO. The top byte is the newest
+		character in the TX FIFO and can be written via the bus interface. The LSB represents the
+		first bit to transmit.
+		The Divisor Latch Access Bit (DLAB) in U1LCR must be zero in order to access the
+		U1THR. The U1THR is write-only.
+		
+		Bits  Name 
+		7:0   THR
+		31:8  Reserved
+		
+	 similarly we have,
+	 
+	 UART1 Receiver Buffer Register (RBR):-
+	 -- The U1RBR is the top byte of the UART1 RX FIFO. The top byte of the RX FIFO contains
+		the oldest character received and can be read via the bus interface. The LSB (bit 0)
+		represents the “oldest” received data bit. If the character received is less than 8 bits, the
+		unused MSBs are padded with zeroes.
+		
+		The Divisor Latch Access Bit (DLAB) in LCR must be zero in order to access the UnRBR.
+        The UnRBR is always read-only.
+		
+		Bits  Name 
+		7:0   RBR
+		31:8  Reserved
+
+     UARTn Line Status Register
+	 -- 0 Receiver Data Ready (RDR)
+			---UnLSR0 is set when the UnRBR holds an unread character and is cleared when the UARTn RBR FIFO is empty.
+			   ----0 The UARTn receiver FIFO is empty.
+			   ----1 The UARTn receiver FIFO is not empty.
+			   
+	 -- 5 Transmitter Holding Register Empty (THRE))
+           ---THRE is set immediately upon detection of an empty UARTn THR and is cleared on a UnTHR write.
+			   ----0 UnTHR contains valid data.
+			   ----1 UnTHR is empty.
+	  
