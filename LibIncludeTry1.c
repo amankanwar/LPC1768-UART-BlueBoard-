@@ -3,8 +3,6 @@ Basic Code
 Author - Aman Kanwar
 *********************************************************************/
 
-
-
 #include "Uart_CortexM3.h"
 
 int main(void)
