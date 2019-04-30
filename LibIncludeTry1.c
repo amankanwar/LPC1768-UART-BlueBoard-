@@ -18,15 +18,15 @@ int main(void)
     
 		nextLine(5);               // 5 lines of spaces
 		sendString((unsigned char *)"User Name     : ");
-   	receiveString(userName);
+   		receiveString(userName);
 		
 		nextLine(2);               // 2 lines of spaces
 		sendString((unsigned char *)"Enter Password: ");
-    receivePassword(userPassword);
+    		receivePassword(userPassword);
 		
 		nextLine(2);              
 		sendString((unsigned char *)"Your username is : ");
-    sendString(userName);              // 2 lines of spaces
+    		sendString(userName);              // 2 lines of spaces
 		
 		nextLine(2);
 		sendString((unsigned char *)"Password is      : ");
